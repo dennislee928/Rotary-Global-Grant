@@ -68,6 +68,8 @@ jobs:
             type=raw,value=${{ steps.date.outputs.date_suffix }}
             type=raw,value=${{ steps.date.outputs.date_suffix }}-${{ github.sha }}
             type=raw,value=latest
+            type=ref,event=branch
+            type=ref,event=pr
 
       - name: Build and push Docker image for ${{ matrix.service.name }}
         uses: docker/build-push-action@v5
@@ -80,6 +82,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
+          build-args: |
+            BUILD_DATE=${{ steps.date.outputs.date_suffix }}
 
       - name: Output image tags
         run: |
