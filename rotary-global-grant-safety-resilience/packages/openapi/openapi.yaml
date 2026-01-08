@@ -1,0 +1,119 @@
+openapi: 3.0.3
+info:
+  title: The Hive x Anti-Fraud API
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+  /v1/reports:
+    post:
+      summary: Create a report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReportRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+    get:
+      summary: List reports
+      responses:
+        "200":
+          description: OK
+  /v1/reports/{id}/triage:
+    post:
+      summary: Triage a report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TriageRequest"
+      responses:
+        "200":
+          description: OK
+  /v1/alerts:
+    post:
+      summary: Create an alert (CAP-ready)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAlertRequest"
+      responses:
+        "201":
+          description: Created
+components:
+  schemas:
+    CreateReportRequest:
+      type: object
+      required: [category, areaHint, description]
+      properties:
+        category:
+          type: string
+          example: scam_phishing
+        areaHint:
+          type: string
+          example: "Near a transit hub / campus entrance"
+        timeWindow:
+          type: string
+          example: "2026-01-08 18:00–18:30"
+        description:
+          type: string
+        evidence:
+          type: array
+          items:
+            type: string
+          description: "URLs or opaque refs (avoid personal identifiers)"
+    Report:
+      type: object
+      properties:
+        id: { type: string }
+        createdAt: { type: string }
+        category: { type: string }
+        areaHint: { type: string }
+        description: { type: string }
+        status: { type: string }
+    TriageRequest:
+      type: object
+      required: [decision, severityFinal]
+      properties:
+        decision:
+          type: string
+          enum: [accept, reject, needs_more_info, escalate]
+        severityFinal:
+          type: string
+          enum: [S0, S1, S2, S3, S4]
+        evidenceLevel:
+          type: string
+          enum: [E0, E1, E2, E3]
+        rationale:
+          type: string
+    CreateAlertRequest:
+      type: object
+      required: [event, urgency, severity, certainty, area, instruction]
+      properties:
+        event: { type: string }
+        urgency: { type: string, enum: [Immediate, Expected, Future, Past, Unknown] }
+        severity: { type: string, enum: [Extreme, Severe, Moderate, Minor, Unknown] }
+        certainty: { type: string, enum: [Observed, Likely, Possible, Unlikely, Unknown] }
+        area: { type: string }
+        instruction: { type: string }

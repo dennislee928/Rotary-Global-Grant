@@ -1,0 +1,12 @@
+category,metric,definition,source,frequency,baseline,target_12m,owner
+education,participants_trained,Total participants (note de-duplication rules),sign-in sheet / form,per event,0,>=300,Education Lead
+education,pre_post_improvement,Average (post - pre) score improvement,quiz results,per event,0,>=+25%,M&E Lead
+education,workshops_count,Number of workshops delivered,event log,monthly,0,>=12,PM
+governance,trained_triagers,Number of triagers/volunteers certified,training records,monthly,0,>=15,Volunteer Lead
+system,median_report_to_triage,Median time from report created to initial triage decision,system logs,weekly,TBD,<=30 min*,Triage Lead
+system,verified_ratio,Verified reports / total reports,triage decisions,monthly,TBD,>=60%,Triage Lead
+system,abuse_rate,Abuse/false reports / total reports,triage decisions,monthly,TBD,<=5%,Safeguarding Lead
+alerts,publish_latency,Time from decision to published alert,system logs,per incident,TBD,<=15 min*,Comms Lead
+accessibility,a11y_language_coverage,Large text + EN/ZH coverage (and others if needed),release checklist,quarterly,0,achieved,Product
+adoption,partner_orgs,Partner organisations with pilot agreement,emails/MOU,quarterly,0,>=4,Rotary Liaison
+adoption,external_adoption,External deployments/forks/case studies,GitHub/deployments,quarterly,0,>=2,Tech Lead
