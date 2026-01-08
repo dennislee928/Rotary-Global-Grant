@@ -1,19 +1,134 @@
 openapi: 3.0.3
 info:
   title: The Hive x Anti-Fraud API
+  description: |
+    Community Safety & Digital Resilience Platform API.
+    
+    This API provides endpoints for:
+    - Community incident reporting
+    - Triage workflow management
+    - CAP-ready alert publishing
+    - Training event management
+    - KPI metrics and dashboard
   version: 0.1.0
+  contact:
+    name: The Hive Team
+    email: support@hive.example.invalid
+
 servers:
   - url: http://localhost:8080
+    description: Local development
+  - url: https://api.hive.example.invalid
+    description: Production
+
+tags:
+  - name: health
+    description: Health check endpoints
+  - name: auth
+    description: Authentication and API keys
+  - name: reports
+    description: Community incident reports
+  - name: triage
+    description: Triage decisions and workflow
+  - name: alerts
+    description: CAP-ready alert management
+  - name: training
+    description: Training events and quiz results
+  - name: metrics
+    description: KPI metrics and dashboard
+
 paths:
   /healthz:
     get:
+      tags: [health]
       summary: Health check
+      description: Returns the health status of the API and its dependencies
       responses:
         "200":
-          description: OK
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /v1/auth/login:
+    post:
+      tags: [auth]
+      summary: User login
+      description: Authenticate with email and password to get a JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/auth/me:
+    get:
+      tags: [auth]
+      summary: Get current user
+      description: Returns information about the currently authenticated user
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: User information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSummary"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/auth/api-keys:
+    post:
+      tags: [auth]
+      summary: Create API key
+      description: Create a new API key for programmatic access
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAPIKeyRequest"
+      responses:
+        "201":
+          description: API key created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/APIKeyResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /v1/reports:
     post:
+      tags: [reports]
       summary: Create a report
+      description: Submit a new community incident report (anonymous)
       requestBody:
         required: true
         content:
@@ -22,24 +137,103 @@ paths:
               $ref: "#/components/schemas/CreateReportRequest"
       responses:
         "201":
-          description: Created
+          description: Report created
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Report"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     get:
+      tags: [reports]
       summary: List reports
+      description: Get a paginated list of reports (requires authentication)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [submitted, under_review, triaged, escalated, closed, spam]
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [suspicious_item, suspicious_person, harassment_stalking, scam_phishing, misinformation_panic, crowd_disorder, infrastructure_hazard, other]
       responses:
         "200":
-          description: OK
-  /v1/reports/{id}/triage:
-    post:
-      summary: Triage a report
+          description: List of reports
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportListResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/reports/{id}:
+    get:
+      tags: [reports]
+      summary: Get report by ID
+      description: Get detailed information about a specific report
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: id
           in: path
           required: true
-          schema: { type: string }
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Report details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportDetail"
+        "404":
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/reports/{id}/triage:
+    post:
+      tags: [triage]
+      summary: Triage a report
+      description: Create a triage decision for a report
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -48,10 +242,56 @@ paths:
               $ref: "#/components/schemas/TriageRequest"
       responses:
         "200":
-          description: OK
+          description: Triage decision created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TriageDecision"
+        "404":
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/triage-decisions:
+    get:
+      tags: [triage]
+      summary: List triage decisions
+      description: Get a paginated list of triage decisions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: reportId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of triage decisions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TriageDecisionListResponse"
+
   /v1/alerts:
     post:
-      summary: Create an alert (CAP-ready)
+      tags: [alerts]
+      summary: Create an alert
+      description: Create a new CAP-ready alert
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -60,38 +300,404 @@ paths:
               $ref: "#/components/schemas/CreateAlertRequest"
       responses:
         "201":
-          description: Created
+          description: Alert created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Alert"
+    get:
+      tags: [alerts]
+      summary: List alerts
+      description: Get a paginated list of alerts
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, approved, published, withdrawn]
+      responses:
+        "200":
+          description: List of alerts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertListResponse"
+
+  /v1/alerts/{id}:
+    get:
+      tags: [alerts]
+      summary: Get alert by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Alert details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Alert"
+        "404":
+          description: Alert not found
+    patch:
+      tags: [alerts]
+      summary: Update an alert
+      description: Update alert status or content
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAlertRequest"
+      responses:
+        "200":
+          description: Alert updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Alert"
+
+  /v1/training-events:
+    post:
+      tags: [training]
+      summary: Create a training event
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTrainingEventRequest"
+      responses:
+        "201":
+          description: Training event created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingEvent"
+    get:
+      tags: [training]
+      summary: List training events
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: List of training events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingEventListResponse"
+
+  /v1/training-events/stats:
+    get:
+      tags: [training]
+      summary: Get training statistics
+      description: Get aggregated training statistics (public)
+      responses:
+        "200":
+          description: Training statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingStats"
+
+  /v1/training-events/{id}/results:
+    post:
+      tags: [training]
+      summary: Record quiz result
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordQuizResultRequest"
+      responses:
+        "201":
+          description: Quiz result recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizResult"
+
+  /v1/metrics/kpi:
+    get:
+      tags: [metrics]
+      summary: Get KPI metrics
+      description: Get all KPI metrics (requires admin/auditor role)
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: KPI metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KPIMetrics"
+
+  /v1/metrics/dashboard:
+    get:
+      tags: [metrics]
+      summary: Get dashboard statistics
+      description: Get public dashboard statistics
+      responses:
+        "200":
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: "Use format: ApiKey hive_ak_xxxxx"
+
   schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        ts:
+          type: string
+          format: date-time
+        version:
+          type: string
+          example: "0.1.0"
+        database:
+          type: string
+          example: connected
+        redis:
+          type: string
+          example: connected
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Invalid request parameters
+        details:
+          type: object
+          additionalProperties:
+            type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+
+    TokenResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          example: 86400
+
+    UserSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [admin, triager, auditor, educator]
+
+    CreateAPIKeyRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        scopes:
+          type: array
+          items:
+            type: string
+        expiresIn:
+          type: integer
+          description: Days until expiry
+
+    APIKeyResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        key:
+          type: string
+          description: Only shown once on creation
+        scopes:
+          type: array
+          items:
+            type: string
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
     CreateReportRequest:
       type: object
       required: [category, areaHint, description]
       properties:
         category:
           type: string
-          example: scam_phishing
+          enum: [suspicious_item, suspicious_person, harassment_stalking, scam_phishing, misinformation_panic, crowd_disorder, infrastructure_hazard, other]
+        severitySuggested:
+          type: string
+          enum: [S0, S1, S2, S3, S4]
         areaHint:
           type: string
-          example: "Near a transit hub / campus entrance"
+          maxLength: 500
         timeWindow:
           type: string
-          example: "2026-01-08 18:00–18:30"
+          maxLength: 100
         description:
           type: string
         evidence:
           type: array
           items:
             type: string
-          description: "URLs or opaque refs (avoid personal identifiers)"
+        reporterContact:
+          type: string
+          maxLength: 255
+
     Report:
       type: object
       properties:
-        id: { type: string }
-        createdAt: { type: string }
-        category: { type: string }
-        areaHint: { type: string }
-        description: { type: string }
-        status: { type: string }
+        id:
+          type: string
+          format: uuid
+        category:
+          type: string
+        severitySuggested:
+          type: string
+        areaHint:
+          type: string
+        timeWindow:
+          type: string
+        description:
+          type: string
+        evidence:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [submitted, under_review, triaged, escalated, closed, spam]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ReportDetail:
+      allOf:
+        - $ref: "#/components/schemas/Report"
+        - type: object
+          properties:
+            triageDecisions:
+              type: array
+              items:
+                $ref: "#/components/schemas/TriageDecision"
+
+    ReportListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Report"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
     TriageRequest:
       type: object
       required: [decision, severityFinal]
@@ -107,13 +713,364 @@ components:
           enum: [E0, E1, E2, E3]
         rationale:
           type: string
+
+    TriageDecision:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        reportId:
+          type: string
+          format: uuid
+        decision:
+          type: string
+        severityFinal:
+          type: string
+        evidenceLevel:
+          type: string
+        rationale:
+          type: string
+        decidedAt:
+          type: string
+          format: date-time
+        decidedBy:
+          $ref: "#/components/schemas/UserSummary"
+
+    TriageDecisionListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TriageDecision"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
     CreateAlertRequest:
       type: object
       required: [event, urgency, severity, certainty, area, instruction]
       properties:
-        event: { type: string }
-        urgency: { type: string, enum: [Immediate, Expected, Future, Past, Unknown] }
-        severity: { type: string, enum: [Extreme, Severe, Moderate, Minor, Unknown] }
-        certainty: { type: string, enum: [Observed, Likely, Possible, Unlikely, Unknown] }
-        area: { type: string }
-        instruction: { type: string }
+        reportId:
+          type: string
+          format: uuid
+        event:
+          type: string
+          maxLength: 255
+        urgency:
+          type: string
+          enum: [Immediate, Expected, Future, Past, Unknown]
+        severity:
+          type: string
+          enum: [Extreme, Severe, Moderate, Minor, Unknown]
+        certainty:
+          type: string
+          enum: [Observed, Likely, Possible, Unlikely, Unknown]
+        area:
+          type: string
+          maxLength: 500
+        instruction:
+          type: string
+        publicMessage:
+          type: string
+        channels:
+          type: array
+          items:
+            type: string
+
+    UpdateAlertRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [draft, approved, published, withdrawn]
+        event:
+          type: string
+        urgency:
+          type: string
+        severity:
+          type: string
+        certainty:
+          type: string
+        area:
+          type: string
+        instruction:
+          type: string
+        publicMessage:
+          type: string
+        channels:
+          type: array
+          items:
+            type: string
+
+    Alert:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        reportId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        event:
+          type: string
+        urgency:
+          type: string
+        severity:
+          type: string
+        certainty:
+          type: string
+        area:
+          type: string
+        instruction:
+          type: string
+        publicMessage:
+          type: string
+        channels:
+          type: array
+          items:
+            type: string
+        capXml:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        publishedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        approvedBy:
+          $ref: "#/components/schemas/UserSummary"
+
+    AlertListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Alert"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    CreateTrainingEventRequest:
+      type: object
+      required: [title, eventDate, location]
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        eventDate:
+          type: string
+          format: date
+        location:
+          type: string
+          maxLength: 500
+        audience:
+          type: string
+        attendanceCount:
+          type: integer
+          minimum: 0
+        preAvg:
+          type: number
+        postAvg:
+          type: number
+        notes:
+          type: string
+
+    TrainingEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        eventDate:
+          type: string
+          format: date
+        location:
+          type: string
+        audience:
+          type: string
+        attendanceCount:
+          type: integer
+        preAvg:
+          type: number
+        postAvg:
+          type: number
+        improvement:
+          type: number
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TrainingEventListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrainingEvent"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    RecordQuizResultRequest:
+      type: object
+      required: [quizType, score]
+      properties:
+        participantHash:
+          type: string
+        quizType:
+          type: string
+          enum: [pre, post]
+        score:
+          type: number
+          minimum: 0
+        maxScore:
+          type: number
+        answers:
+          type: object
+
+    QuizResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        quizType:
+          type: string
+        score:
+          type: number
+        maxScore:
+          type: number
+        percentage:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+
+    TrainingStats:
+      type: object
+      properties:
+        totalEvents:
+          type: integer
+        totalParticipants:
+          type: integer
+        averageImprovement:
+          type: number
+        targetMet:
+          type: boolean
+
+    KPIMetrics:
+      type: object
+      properties:
+        education:
+          type: object
+          properties:
+            workshopsCount:
+              type: integer
+            workshopsTarget:
+              type: integer
+            participantsTrained:
+              type: integer
+            participantsTarget:
+              type: integer
+            prePostImprovement:
+              type: number
+            improvementTarget:
+              type: number
+        system:
+          type: object
+          properties:
+            medianReportToTriage:
+              type: number
+            triageTimeTarget:
+              type: number
+            verifiedRatio:
+              type: number
+            verifiedRatioTarget:
+              type: number
+            abuseRate:
+              type: number
+            abuseRateTarget:
+              type: number
+            alertPublishLatency:
+              type: number
+            publishLatencyTarget:
+              type: number
+        adoption:
+          type: object
+          properties:
+            partnerOrgs:
+              type: integer
+            partnerOrgsTarget:
+              type: integer
+            externalAdoption:
+              type: integer
+            externalAdoptionTarget:
+              type: integer
+        governance:
+          type: object
+          properties:
+            certifiedTriagers:
+              type: integer
+            triagersTarget:
+              type: integer
+
+    DashboardStats:
+      type: object
+      properties:
+        totalReports:
+          type: integer
+        reportsThisWeek:
+          type: integer
+        activeAlerts:
+          type: integer
+        recentAlerts:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              event:
+                type: string
+              severity:
+                type: string
+              area:
+                type: string
+              createdAt:
+                type: string
+        categoryBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+              count:
+                type: integer
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
