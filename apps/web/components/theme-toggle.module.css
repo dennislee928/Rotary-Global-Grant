@@ -1,0 +1,27 @@
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.toggle:hover {
+  background: var(--color-border-default);
+  transform: scale(1.05);
+}
+
+.toggle:active {
+  transform: scale(0.95);
+}
+
+.placeholder {
+  width: 40px;
+  height: 40px;
+}
