@@ -1,26 +1,40 @@
 package main
 
 import (
-  "log"
-  "os"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
-  "github.com/dennislee928/rotary-global-grant-safety-resilience/apps/api/internal/httpapi"
+	"github.com/dennislee928/rotary-global-grant-safety-resilience/apps/api/internal/config"
+	"github.com/dennislee928/rotary-global-grant-safety-resilience/apps/api/internal/httpapi"
 )
 
 func main() {
-  addr := getenv("HTTP_ADDR", ":8080")
-  r := httpapi.NewRouter()
+	// Load configuration
+	cfg := config.Load()
 
-  log.Printf("api listening on %s", addr)
-  if err := r.Run(addr); err != nil {
-    log.Fatalf("server error: %v", err)
-  }
-}
+	// Create server
+	server, err := httpapi.NewServer(cfg)
+	if err != nil {
+		log.Fatalf("failed to create server: %v", err)
+	}
+	defer server.Close()
 
-func getenv(k, def string) string {
-  v := os.Getenv(k)
-  if v == "" {
-    return def
-  }
-  return v
+	// Handle graceful shutdown
+	go func() {
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+		<-sigChan
+
+		log.Println("shutting down...")
+		server.Close()
+		os.Exit(0)
+	}()
+
+	// Start server
+	log.Printf("api listening on %s (mode: %s)", cfg.HTTPAddr, cfg.AppMode)
+	if err := server.Run(); err != nil {
+		log.Fatalf("server error: %v", err)
+	}
 }
