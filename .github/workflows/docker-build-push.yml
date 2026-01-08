@@ -55,11 +55,12 @@ jobs:
         id: tags
         run: |
           DATE_SUFFIX=$(date -u +%Y%m%d)
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository_owner }}/rotary-grant-${{ matrix.service.name }}"
           
           # Build tags with date suffix
           TAGS="${IMAGE_NAME}:${DATE_SUFFIX}"
-          TAGS="${TAGS},${IMAGE_NAME}:${DATE_SUFFIX}-${GITHUB_SHA::7}"
+          TAGS="${TAGS},${IMAGE_NAME}:${DATE_SUFFIX}-${SHORT_SHA}"
           TAGS="${TAGS},${IMAGE_NAME}:latest"
           
           echo "date_suffix=$DATE_SUFFIX" >> $GITHUB_OUTPUT
