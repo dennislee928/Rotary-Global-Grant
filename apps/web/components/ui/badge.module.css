@@ -1,0 +1,69 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 500;
+  border-radius: var(--radius-full);
+}
+
+/* Sizes */
+.sm {
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+}
+
+.md {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+/* Variants */
+.default {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+}
+
+.success {
+  background: color-mix(in srgb, var(--color-success) 15%, transparent);
+  color: var(--color-success);
+}
+
+.warning {
+  background: color-mix(in srgb, var(--color-warning) 15%, transparent);
+  color: var(--color-warning);
+}
+
+.error {
+  background: color-mix(in srgb, var(--color-error) 15%, transparent);
+  color: var(--color-error);
+}
+
+.info {
+  background: color-mix(in srgb, var(--color-info) 15%, transparent);
+  color: var(--color-info);
+}
+
+/* Severity variants */
+.severity-S0 {
+  background: color-mix(in srgb, var(--color-severity-s0) 15%, transparent);
+  color: var(--color-severity-s0);
+}
+
+.severity-S1 {
+  background: color-mix(in srgb, var(--color-severity-s1) 15%, transparent);
+  color: var(--color-severity-s1);
+}
+
+.severity-S2 {
+  background: color-mix(in srgb, var(--color-severity-s2) 15%, transparent);
+  color: var(--color-severity-s2);
+}
+
+.severity-S3 {
+  background: color-mix(in srgb, var(--color-severity-s3) 15%, transparent);
+  color: var(--color-severity-s3);
+}
+
+.severity-S4 {
+  background: color-mix(in srgb, var(--color-severity-s4) 15%, transparent);
+  color: var(--color-severity-s4);
+}
